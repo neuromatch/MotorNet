@@ -2,8 +2,7 @@ import numpy as np
 import torch as th
 import gymnasium as gym
 from gymnasium.utils import seeding
-from typing import Any
-
+from typing import Any, Union, Optional
 
 DEVICE = th.device("cpu")
 
@@ -47,7 +46,7 @@ class Environment(gym.Env, th.nn.Module):
     differentiable: bool = True,
     max_ep_duration: float = 1.,
     action_noise: float = 0.,
-    obs_noise: float | list = 0.,
+    obs_noise: Union[float, list] = 0.,
     action_frame_stacking: int = 0,
     proprioception_delay: float = None,
     vision_delay: float = None,
@@ -148,7 +147,7 @@ class Environment(gym.Env, th.nn.Module):
     vis = self.states["fingertip"]
     return self.apply_noise(vis, self.vision_noise)
 
-  def get_obs(self, action=None, deterministic: bool = False) -> th.Tensor | np.ndarray:
+  def get_obs(self, action=None, deterministic: bool = False) -> Union[th.Tensor, np.ndarray]:
     """
     Returns a `(batch_size, n_features)` `tensor` containing the (potientially time-delayed) observations.
     By default, this is the task goal, followed by the output of the :meth:`get_proprioception()` method, 
@@ -174,10 +173,10 @@ class Environment(gym.Env, th.nn.Module):
 
   def step(
       self,
-      action: th.Tensor | np.ndarray,
+      action: Union[th.Tensor, np.ndarray],
       deterministic: bool = False,
       **kwargs,
-    ) -> tuple[th.Tensor | np.ndarray, bool, bool, dict[str, Any]]:
+    ) -> tuple[Union[th.Tensor, np.ndarray], bool, bool, dict[str, Any]]:
     """
     Perform one simulation step. This method is likely to be overwritten by any subclass to implement user-defined 
     computations, such as reward value calculation for reinforcement learning, custom truncation or termination
@@ -226,7 +225,7 @@ class Environment(gym.Env, th.nn.Module):
 
     return obs, reward, terminated, truncated, info
 
-  def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None):
+  def reset(self, *, seed: Optional[int] = None, options: Optional[dict[str, Any]] = None):
     """
     Initialize the task goal and :attr:`effector` states for a (batch of) simulation episode(s). The :attr:`effector`
     states (joint, cartesian, muscle, geometry) are initialized to be biomechanically compatible with each other.
@@ -260,7 +259,7 @@ class Environment(gym.Env, th.nn.Module):
 
     options = {} if options is None else options
     batch_size: int = options.get("batch_size", 1)
-    joint_state: th.Tensor | np.ndarray | None = options.get("joint_state", None)
+    joint_state: Union[th.Tensor, np.ndarray] = options.get("joint_state", None)
     deterministic: bool = options.get("deterministic", False)
 
     if joint_state is not None:
@@ -338,7 +337,7 @@ class Environment(gym.Env, th.nn.Module):
     """Shortcut to :meth:`motornet.effector.Effector.joint2cartesian()` method."""
     return self.effector.joint2cartesian(joint_states)
   
-  def _set_generator(self, seed: int | None):
+  def _set_generator(self, seed: Optional[int]):
     if seed is not None:
       self.effector.reset(seed=seed)
 
@@ -355,7 +354,7 @@ class Environment(gym.Env, th.nn.Module):
   def np_random(self, rng: np.random.Generator) -> None:
       self.effector.np_random = rng
 
-  def apply_noise(self, loc, noise: float | list) -> th.Tensor:
+  def apply_noise(self, loc, noise: Union[float , list]) -> th.Tensor:
     """Applies element-wise Gaussian noise to the input `loc`.
 
     Args:
@@ -453,7 +452,7 @@ class RandomTargetReach(Environment):
     super().__init__(*args, **kwargs)
     self.obs_noise[:self.skeleton.space_dim] = [0.] * self.skeleton.space_dim  # target info is noiseless
 
-  def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None) -> tuple[Any, dict[str, Any]]:
+  def reset(self, *, seed: Optional[int] = None, options: Optional[dict[str, Any]] = None) -> tuple[Any, dict[str, Any]]:
     """
     Uses the :meth:`Environment.reset()` method of the parent class :class:`Environment` that can be overwritten to 
     change the returned data. Here the goals (`i.e.`, the targets) are drawn from a random uniform distribution across
@@ -463,7 +462,7 @@ class RandomTargetReach(Environment):
 
     options = {} if options is None else options
     batch_size: int = options.get('batch_size', 1)
-    joint_state: th.Tensor | np.ndarray | None = options.get('joint_state', None)
+    joint_state: Union[th.Tensor, np.ndarray] = options.get('joint_state', None)
     deterministic: bool = options.get('deterministic', False)
     
     if joint_state is not None:

@@ -1,6 +1,6 @@
 import torch as th
 import numpy as np
-from typing import Union, Any
+from typing import Union, Any, Optional
 from gymnasium.utils import seeding
 from torch.nn.parameter import Parameter
 from motornet.skeleton import TwoDofArm, PointMass
@@ -153,7 +153,7 @@ class Effector(th.nn.Module):
     for _ in range(self.n_ministeps):
       self.integrate(a, endpoint_load, joint_load)
 
-  def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None):
+  def reset(self, *, seed: Optional[int] = None, options: Optional[dict[str, Any]] = None):
     """Sets initial states (joint, cartesian, muscle, geometry) that are biomechanically compatible with each other.
 
     Args:
@@ -177,7 +177,7 @@ class Effector(th.nn.Module):
 
     options = {} if options is None else options
     batch_size: int = options.get('batch_size', 1)
-    joint_state: th.Tensor | np.ndarray | None = options.get('joint_state', None)
+    joint_state: Union[th.Tensor, np.ndarray] = options.get('joint_state', None)
 
     if joint_state is not None:
       joint_state_shape = np.shape(joint_state.cpu().detach().numpy())
